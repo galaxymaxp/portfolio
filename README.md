@@ -13,3 +13,9 @@ npm run build
 - 3D shapes live in `src/objects.jsx`; camera, fog and lighting in `src/Scene.jsx`.
 - Scrolling moves the camera down the z axis; the mouse shifts it sideways, so near objects move more than far ones.
 - Hover an object to spin it up, click a project object to open its card (Esc closes).
+
+## Deploy (GitHub Pages)
+
+`.github/workflows/deploy.yml` builds and deploys on every push to `main` (or run it by hand from the Actions tab).
+One-time setup: repo **Settings → Pages → Source: GitHub Actions**. The site is served at
+`https://<user>.github.io/<repo>/`; the workflow sets Vite's `base` to `/<repo>/` so asset paths resolve there.
