@@ -17,7 +17,7 @@ export const profile = {
 export const projects = [
   {
     id: 'stay-focused',
-    shape: 'knot',
+    shape: 'phone',
     title: 'Stay Focused',
     blurb:
       'A mobile-first study app that turns school material — Canvas courses, PDFs and photos of notes — into reviewers you can save and study from.',
@@ -27,7 +27,7 @@ export const projects = [
   },
   {
     id: 'val-checker',
-    shape: 'box',
+    shape: 'monitor',
     title: 'VAL Checker',
     blurb:
       'Watches the VALORANT skins you want and emails you the day one shows up in your daily store — with encrypted sessions and support for multiple Riot accounts.',

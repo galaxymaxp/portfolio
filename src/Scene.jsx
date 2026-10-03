@@ -98,6 +98,7 @@ function Layout({ items, activeId, onSelect }) {
         shape={item.shape}
         position={[x, y, -i * STOP_GAP]}
         scale={(narrow ? 0.7 : 1) * (item.center ? 0.75 : 1)}
+        yaw={narrow ? 0 : -side * 0.4}
         active={activeId === item.id}
         onSelect={item.selectable ? () => onSelect(item.id) : undefined}
       />
