@@ -35,7 +35,7 @@ function Rig({ stops }) {
   return (
     <group ref={lights}>
       <pointLight position={[-4, 4, 2]} intensity={90} distance={30} color="#ffffff" />
-      <pointLight position={[5, -2, 1]} intensity={60} distance={30} color="#8a97ff" />
+      <pointLight position={[5, -2, 1]} intensity={60} distance={30} color="#ffffff" />
     </group>
   )
 }
@@ -49,9 +49,9 @@ function Lights() {
       <Environment resolution={256}>
         <group rotation={[-Math.PI / 4, 0, 0]}>
           <Lightformer form="rect" intensity={4} position={[0, 5, -6]} scale={[12, 3, 1]} />
-          <Lightformer form="rect" intensity={2} position={[-6, 1, 2]} scale={[3, 8, 1]} color="#aab4ff" />
+          <Lightformer form="rect" intensity={2} position={[-6, 1, 2]} scale={[3, 8, 1]} />
           <Lightformer form="rect" intensity={2} position={[6, 0, 2]} scale={[3, 8, 1]} />
-          <Lightformer form="ring" intensity={3} position={[0, -3, 4]} scale={4} color="#7c8cff" />
+          <Lightformer form="ring" intensity={3} position={[0, -3, 4]} scale={4} />
         </group>
       </Environment>
     </>
@@ -77,7 +77,7 @@ export default function Scene({ items, activeId, onSelect }) {
         size={2.2}
         speed={0.25}
         opacity={0.5}
-        color="#9aa6ff"
+        color="#ffffff"
       />
     </Canvas>
   )

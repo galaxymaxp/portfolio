@@ -3,7 +3,7 @@
   --fg: #fdfdfd;
   --muted: #a1a4a5;
   --line: rgba(255, 255, 255, 0.12);
-  --accent: #7c8cff;
+  --accent: #ffffff;
   --serif: 'Instrument Serif', 'Times New Roman', serif;
   --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
@@ -121,7 +121,7 @@ h3 { font-size: 40px; margin-bottom: 14px; }
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(10, 10, 12, 0.92);
-  box-shadow: 0 0 80px rgba(124, 140, 255, 0.12);
+  box-shadow: 0 0 80px rgba(255, 255, 255, 0.06);
 }
 .card .tags { margin-bottom: 26px; }
 .row { display: flex; gap: 10px; }

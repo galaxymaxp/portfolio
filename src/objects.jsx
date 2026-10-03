@@ -8,7 +8,7 @@ import { Monitor, Phone } from './Devices.jsx'
 const reduceMotion =
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const ACCENT = '#7c8cff'
+const ACCENT = '#ffffff'
 
 /* ---------- shapes ---------- */
 

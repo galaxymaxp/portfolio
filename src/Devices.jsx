@@ -1,6 +1,10 @@
 import { useEffect, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
+
+const reduceMotion =
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const media = (file) => `${import.meta.env.BASE_URL}media/${file}`
 
@@ -122,13 +126,38 @@ export function Phone() {
 /* ---------- monitor showing the VAL Checker site ---------- */
 
 const MON = { w: 3.3, h: 2.06, bezel: 0.07, d: 0.09 }
+const PAGE = { w: 1200, h: 1610 } // val-checker.webp
+// Share of the page height the screen shows at once.
+const VISIBLE = PAGE.w / (MON.w / MON.h) / PAGE.h
 
+// One browse cycle in seconds: pause at the top, scroll down, pause, scroll up.
+const HOLD = 3
+const MOVE = 5
+const CYCLE = (HOLD + MOVE) * 2
+
+function scrollAt(t) {
+  const c = t % CYCLE
+  const ease = (x) => x * x * (3 - 2 * x)
+  if (c < HOLD) return 0
+  if (c < HOLD + MOVE) return ease((c - HOLD) / MOVE)
+  if (c < HOLD * 2 + MOVE) return 1
+  return 1 - ease((c - HOLD * 2 - MOVE) / MOVE)
+}
+
+// A monitor showing the VAL Checker app, scrolling slowly through the page
+// as if someone were browsing it.
 export function Monitor() {
   const screen = useMemo(() => {
     const m = new THREE.MeshBasicMaterial({ toneMapped: false })
     m.map = loadTexture('val-checker.webp')
+    m.map.repeat.set(1, VISIBLE)
+    m.map.offset.y = 1 - VISIBLE
     return m
   }, [])
+  useFrame((state) => {
+    if (reduceMotion) return
+    screen.map.offset.y = (1 - VISIBLE) * (1 - scrollAt(state.clock.elapsedTime))
+  })
   const shell = '#1d1e24'
   return (
     <group scale={0.82} position={[0, 0.25, 0]}>
