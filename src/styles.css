@@ -43,7 +43,7 @@ body {
 }
 .section.left { justify-content: flex-start; }
 .section.right { justify-content: flex-start; }
-.section.bottom { justify-content: center; text-align: center; }
+.section.bottom { justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 16svh; }
 .copy { max-width: 460px; pointer-events: none; }
 .copy a, .copy button { pointer-events: auto; }
 .copy.center { display: flex; flex-direction: column; align-items: center; gap: 22px; max-width: 640px; }

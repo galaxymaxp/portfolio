@@ -1,40 +1,38 @@
 // Edit this file — all text on the page comes from here.
 export const profile = {
-  name: 'Your Name',
-  role: 'Software engineer',
-  tagline: 'I build fast, considered software for the web.',
-  email: 'omgraythekid@gmail.com',
-  links: [
-    { label: 'GitHub', href: 'https://github.com/galaxymaxp' },
-  ],
+  name: 'Fely Max Razel P. Dilinila',
+  role: 'BSIT student · Creative generalist',
+  tagline: 'I build apps that take the busywork off your plate.',
+  // Leave empty to point the contact buttons at GitHub instead of email.
+  email: '',
+  links: [{ label: 'GitHub', href: 'https://github.com/galaxymaxp' }],
   about:
-    'Replace this with two or three sentences about what you build, what you care about, and what you are looking for.',
+    'I am a BSIT student at the University of the Cordilleras and a MAWD graduate from STI Senior High School. ' +
+    'I work across code, video editing, digital art and Photoshop, and I coach and mentor on the side. ' +
+    'I like building things that solve a real problem I or my friends have, then polishing them until they feel good to use.',
+  skills: ['TypeScript', 'React / React Native', 'Next.js', 'Supabase', 'Video editing', 'Photoshop', 'Digital art'],
 }
 
 // One entry per 3D object. `shape` picks the object in src/objects.jsx.
 export const projects = [
   {
-    id: 'one',
+    id: 'stay-focused',
     shape: 'knot',
-    title: 'Project One',
-    blurb: 'A one-line description of what it does and why it matters.',
-    stack: ['React', 'TypeScript', 'Postgres'],
-    href: '#',
+    title: 'Stay Focused',
+    blurb:
+      'A mobile-first study app that turns school material — Canvas courses, PDFs and photos of notes — into reviewers you can save and study from.',
+    stack: ['Expo / React Native', 'Next.js', 'Supabase', 'OpenAI', 'Canvas API', 'OCR'],
+    href: 'https://galaxymaxp.github.io/stay-focused-showcase/',
+    repo: 'https://github.com/galaxymaxp/stay-focused-v2',
   },
   {
-    id: 'two',
+    id: 'val-checker',
     shape: 'box',
-    title: 'Project Two',
-    blurb: 'A one-line description of what it does and why it matters.',
-    stack: ['Node', 'GraphQL'],
-    href: '#',
-  },
-  {
-    id: 'three',
-    shape: 'discs',
-    title: 'Project Three',
-    blurb: 'A one-line description of what it does and why it matters.',
-    stack: ['Python', 'FastAPI'],
-    href: '#',
+    title: 'VAL Checker',
+    blurb:
+      'Watches the VALORANT skins you want and emails you the day one shows up in your daily store — with encrypted sessions and support for multiple Riot accounts.',
+    stack: ['Next.js', 'TypeScript', 'Supabase', 'Browser extension'],
+    href: 'https://val-checker-three.vercel.app',
+    repo: 'https://github.com/galaxymaxp/val-checker',
   },
 ]

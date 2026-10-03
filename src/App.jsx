@@ -25,6 +25,10 @@ export default function App() {
     [],
   )
   const active = projects.find((p) => p.id === activeId)
+  // Objects alternate right/left by stop index (see Layout in Scene.jsx), so
+  // text goes on the opposite side: even stops → text left, odd → text right.
+  const textSide = (stopIndex) => (stopIndex % 2 === 0 ? 'left' : 'right')
+  const contactHref = profile.email ? `mailto:${profile.email}` : profile.links[0].href
 
   return (
     <>
@@ -34,7 +38,7 @@ export default function App() {
 
       <header className="nav">
         <span className="nav-name">{profile.name}</span>
-        <a className="pill" href={`mailto:${profile.email}`}>
+        <a className="pill" href={contactHref}>
           Get in touch
         </a>
       </header>
@@ -49,7 +53,7 @@ export default function App() {
         </section>
 
         {projects.map((p, i) => (
-          <section key={p.id} className={`section ${i % 2 === 0 ? 'right' : 'left'}`}>
+          <section key={p.id} className={`section ${textSide(i + 1)}`}>
             <div className="copy">
               <p className="label">
                 {String(i + 1).padStart(2, '0')} / Project
@@ -68,11 +72,16 @@ export default function App() {
           </section>
         ))}
 
-        <section className="section left">
+        <section className={`section ${textSide(projects.length + 1)}`}>
           <div className="copy">
             <p className="label">About</p>
             <h2>{profile.name}</h2>
             <p className="body">{profile.about}</p>
+            <ul className="tags">
+              {profile.skills.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -80,11 +89,11 @@ export default function App() {
           <div className="copy center">
             <p className="label">Contact</p>
             <h2>Let&rsquo;s build something.</h2>
-            <a className="pill solid" href={`mailto:${profile.email}`}>
-              {profile.email}
+            <a className="pill solid" href={contactHref}>
+              {profile.email || 'Find me on GitHub'}
             </a>
             <div className="links">
-              {profile.links.map((l) => (
+              {profile.links.filter((l) => l.href !== contactHref).map((l) => (
                 <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
                   {l.label}
                 </a>
@@ -109,6 +118,11 @@ export default function App() {
               <a className="pill solid" href={active.href} target="_blank" rel="noreferrer">
                 Open
               </a>
+              {active.repo && (
+                <a className="pill" href={active.repo} target="_blank" rel="noreferrer">
+                  Code
+                </a>
+              )}
               <button className="pill" onClick={() => setActiveId(null)}>
                 Close
               </button>

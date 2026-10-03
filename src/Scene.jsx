@@ -91,13 +91,13 @@ function Layout({ items, activeId, onSelect }) {
   return items.map((item, i) => {
     const side = i % 2 === 0 ? 1 : -1
     const x = narrow || item.center ? 0 : side * 2.7
-    const y = narrow ? 1.5 : item.center ? 1.3 : 0
+    const y = narrow ? 1.5 : item.center ? 1.5 : 0
     return (
       <Interactive
         key={item.id}
         shape={item.shape}
         position={[x, y, -i * STOP_GAP]}
-        scale={narrow ? 0.7 : 1}
+        scale={(narrow ? 0.7 : 1) * (item.center ? 0.75 : 1)}
         active={activeId === item.id}
         onSelect={item.selectable ? () => onSelect(item.id) : undefined}
       />
