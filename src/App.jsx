@@ -19,8 +19,8 @@ export default function App() {
     () => [
       { id: 'hero', shape: 'orb' },
       ...projects.map((p) => ({ id: p.id, shape: p.shape, selectable: true })),
-      { id: 'about', shape: 'blob' },
-      { id: 'contact', shape: 'ring', center: true },
+      { id: 'about', shape: 'cube' },
+      { id: 'contact', shape: 'urchin', center: true },
     ],
     [],
   )

@@ -1,43 +1,24 @@
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Float, MeshDistortMaterial } from '@react-three/drei'
+import { Float } from '@react-three/drei'
 import * as THREE from 'three'
-import { Orb } from './Orb.jsx'
+import { LiquidCube, LiquidOrb, Rumbler, Twister, Urchin } from './Chrome.jsx'
 import { Monitor, Phone } from './Devices.jsx'
 
 const reduceMotion =
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const ACCENT = '#ffffff'
-
 /* ---------- shapes ---------- */
 
-function Blob() {
-  return (
-    <mesh>
-      <sphereGeometry args={[1.3, 96, 96]} />
-      <MeshDistortMaterial
-        color="#14141c"
-        metalness={0.8}
-        roughness={0.2}
-        distort={0.35}
-        speed={1.5}
-        envMapIntensity={1.3}
-      />
-    </mesh>
-  )
+const SHAPES = {
+  orb: LiquidOrb,
+  cube: LiquidCube,
+  urchin: Urchin,
+  rumbler: Rumbler,
+  twister: Twister,
+  phone: Phone,
+  monitor: Monitor,
 }
-
-function Ring() {
-  return (
-    <mesh>
-      <torusGeometry args={[1.2, 0.07, 32, 160]} />
-      <meshBasicMaterial color={ACCENT} toneMapped={false} />
-    </mesh>
-  )
-}
-
-const SHAPES = { orb: Orb, phone: Phone, monitor: Monitor, blob: Blob, ring: Ring }
 
 // Devices turn to face you and sway; everything else spins.
 const SWAY = new Set(['phone', 'monitor'])

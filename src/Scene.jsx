@@ -46,13 +46,15 @@ function Lights() {
       <ambientLight intensity={0.15} />
       <directionalLight position={[4, 5, 6]} intensity={0.8} />
       {/* Studio-style reflections built from shapes, so no HDR file is downloaded. */}
-      <Environment resolution={256}>
-        <group rotation={[-Math.PI / 4, 0, 0]}>
-          <Lightformer form="rect" intensity={4} position={[0, 5, -6]} scale={[12, 3, 1]} />
-          <Lightformer form="rect" intensity={2} position={[-6, 1, 2]} scale={[3, 8, 1]} />
-          <Lightformer form="rect" intensity={2} position={[6, 0, 2]} scale={[3, 8, 1]} />
-          <Lightformer form="ring" intensity={3} position={[0, -3, 4]} scale={4} />
-        </group>
+      {/* A black studio with bright softboxes: chrome reflects these as the
+          crisp white bands and highlights that make it read as metal. */}
+      <Environment resolution={512}>
+        <Lightformer form="rect" intensity={2} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[7, 2.5, 1]} />
+        <Lightformer form="rect" intensity={4} position={[-5, 1, 3]} rotation-y={Math.PI / 2.5} scale={[1.2, 10, 1]} />
+        <Lightformer form="rect" intensity={4} position={[5, 1, 3]} rotation-y={-Math.PI / 2.5} scale={[1.2, 10, 1]} />
+        <Lightformer form="rect" intensity={2} position={[0, 0, -8]} scale={[14, 1.2, 1]} />
+        <Lightformer form="rect" intensity={1.5} position={[0, -1.5, 8]} rotation-y={Math.PI} scale={[8, 0.6, 1]} />
+        <Lightformer form="rect" intensity={0.6} position={[0, -6, 0]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
       </Environment>
     </>
   )
@@ -70,6 +72,7 @@ export default function Scene({ items, activeId, onSelect }) {
       <Lights />
       <Rig stops={items.length} />
       <Layout items={items} activeId={activeId} onSelect={onSelect} />
+      <Decor stops={items.length} />
       <Sparkles
         count={140}
         scale={[22, 12, STOP_GAP * items.length]}
@@ -104,4 +107,22 @@ function Layout({ items, activeId, onSelect }) {
       />
     )
   })
+}
+
+// Extra pieces you fly past between sections. Each sits behind the previous
+// stop on that stop's object side (even stops right, odd left) and further
+// out than the object, so it never hides behind the text or the object.
+const DECOR = [
+  { shape: 'rumbler', at: 0.5, x: 6, y: 2.4, scale: 0.55 },
+  { shape: 'twister', at: 1.5, x: -6, y: -2.2, scale: 0.7 },
+  { shape: 'rumbler', at: 2.5, x: 6, y: -2.3, scale: 0.45 },
+  { shape: 'twister', at: 3.5, x: -6, y: 2.3, scale: 0.6 },
+]
+
+function Decor({ stops }) {
+  const width = useThree((s) => s.size.width)
+  if (width < 768) return null
+  return DECOR.filter((d) => d.at < stops - 1).map((d, i) => (
+    <Interactive key={i} shape={d.shape} position={[d.x, d.y, -d.at * STOP_GAP]} scale={d.scale} />
+  ))
 }
