@@ -20,6 +20,9 @@ const SHAPES = {
   monitor: Monitor,
 }
 
+// Shapes that do something of their own when tapped.
+const TAPPABLE = new Set(['blocks'])
+
 // Devices turn to face you and sway; everything else spins.
 const SWAY = new Set(['phone', 'monitor'])
 
@@ -33,7 +36,9 @@ export function Interactive({ shape, position, scale = 1, yaw = 0, onSelect, act
   const sway = SWAY.has(shape)
   const spinner = useRef()
   const [hovered, setHovered] = useState(false)
-  const clickable = Boolean(onSelect)
+  const tappable = TAPPABLE.has(shape)
+  const clickable = Boolean(onSelect) || tappable
+  const [taps, setTaps] = useState(0)
 
   useFrame((state, dt) => {
     const g = spinner.current
@@ -72,10 +77,11 @@ export function Interactive({ shape, position, scale = 1, yaw = 0, onSelect, act
           }}
           onClick={(e) => {
             e.stopPropagation()
+            if (tappable) setTaps((n) => n + 1)
             onSelect?.()
           }}
         >
-          <Shape hovered={hovered} />
+          <Shape hovered={hovered} taps={taps} />
         </group>
       </Float>
     </group>

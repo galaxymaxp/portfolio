@@ -162,98 +162,167 @@ const PITCH = 0.66 // block size plus gap
 const SLOTS = []
 for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) SLOTS.push([x, y, z])
 
-// The loop, in seconds. Blocks fly in and snap together, the cube spins and
-// its top layer twists, then it blows apart and the pieces drift and tumble
-// until the next round pulls them back in.
-const T = { assemble: 2.8, stagger: 0.045, fly: 1.0, spin: [3.0, 4.1], twist: [4.2, 5.0], explode: [5.5, 6.1], end: 8.2 }
-const BLAST = 1.7
-const DRIFT = 0.4
+// How long each phase lasts, in seconds.
+const PHASE = { assemble: 2.3, hold: 2.8, shake: 1.1, scatter: 2.4 }
+const STAGGER = 0.045 // delay between blocks setting off when assembling
+const FLY = 1.0 // how long one block takes to fly home
 
 const clamp01 = (x) => Math.min(Math.max(x, 0), 1)
 const easeInOut = (x) => x * x * (3 - 2 * x)
-const easeOut = (x) => 1 - Math.pow(1 - x, 3)
 // Overshoots a little before settling: the "snap" of a magnet.
 const easeOutBack = (x) => {
   const c = 1.9
   return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2)
 }
 
-// Direction block `i` is thrown in round `c`: outward from its slot, with a
-// per-round wobble so every explosion looks different.
-function blastDir(c, i, out) {
-  const [x, y, z] = SLOTS[i]
-  out.set(x + (hash(c, i, 1) - 0.5) * 1.6, y + (hash(c, i, 2) - 0.5) * 1.6, z + (hash(c, i, 3) - 0.5) * 1.6)
-  if (out.lengthSq() < 0.01) out.set(0, 1, 0)
-  return out.normalize()
-}
-
-function tumbleAxis(c, i, out) {
-  return out.set(hash(c, i, 4) - 0.5, hash(c, i, 5) - 0.5, hash(c, i, 6) - 0.5).normalize()
-}
-
-export function Blocks({ hovered }) {
+// 27 chrome blocks on a loop: they fly in and snap into a cube, the cube
+// turns and its top layer twists, it shakes harder and harder, then blows
+// apart; the pieces drift and tumble until they are pulled back in.
+//
+// Every block keeps its real position, velocity and rotation, and each phase
+// starts from wherever the last one left it, so nothing ever jumps.
+// Tapping the finished cube skips straight to the shake.
+export function Blocks({ hovered, taps = 0 }) {
   const chrome = useChrome({ roughness: 0.09 })
   const mesh = useRef()
   const geometry = useMemo(() => new RoundedBoxGeometry(0.6, 0.6, 0.6, 4, 0.07), [])
   const tick = useEnergy(hovered)
+
+  const sim = useMemo(() => {
+    const blocks = SLOTS.map(([x, y, z], i) => ({
+      home: new THREE.Vector3(x, y, z).multiplyScalar(PITCH),
+      top: y === 1,
+      pos: new THREE.Vector3(x, y, z).multiplyScalar(PITCH * 4),
+      quat: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 1, 0).normalize(), i),
+      from: new THREE.Vector3(),
+      fromQuat: new THREE.Quaternion(),
+      vel: new THREE.Vector3(),
+      spin: new THREE.Vector3(),
+    }))
+    const state = { blocks, phase: 'assemble', time: 0, round: 0, captured: false }
+    if (import.meta.env.DEV) window.__blocks = state // for automated checks only
+    return state
+  }, [])
+
   const tmp = useMemo(
     () => ({
       m: new THREE.Matrix4(),
       q: new THREE.Quaternion(),
-      q2: new THREE.Quaternion(),
       p: new THREE.Vector3(),
-      a: new THREE.Vector3(),
-      b: new THREE.Vector3(),
-      d: new THREE.Vector3(),
-      ax: new THREE.Vector3(),
+      v: new THREE.Vector3(),
       one: new THREE.Vector3(1, 1, 1),
       yAxis: new THREE.Vector3(0, 1, 0),
+      identity: new THREE.Quaternion(),
     }),
     [],
   )
 
+  const enter = (phase) => {
+    sim.phase = phase
+    sim.time = 0
+    sim.captured = false
+  }
+
+  // A tap only counts while the cube is whole.
+  useEffect(() => {
+    if (taps > 0 && sim.phase === 'hold') enter('shake')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taps])
+
   useFrame((_, dt) => {
-    const { t } = tick(dt, 1)
+    tick(dt)
     const g = mesh.current
     if (!g) return
-    const round = Math.floor(t / T.end)
-    const lt = t - round * T.end
-    const { m, q, q2, p, a, b, d, ax, one, yAxis } = tmp
+    const step = reduceMotion ? 0 : Math.min(dt, 1 / 30) * (hovered ? 1.5 : 1)
+    sim.time += step
+    const t = sim.time
+    const { m, q, p, v, one, yAxis, identity } = tmp
 
-    // Whole-cube spin and top-layer twist are each exactly a quarter turn,
-    // so once they finish the blocks sit in slots again and the angles can
-    // snap back to zero invisibly (every block looks the same).
-    const spin = easeInOut(clamp01((lt - T.spin[0]) / (T.spin[1] - T.spin[0]))) * (Math.PI / 2)
-    const twist = easeInOut(clamp01((lt - T.twist[0]) / (T.twist[1] - T.twist[0]))) * (Math.PI / 2)
-    const exploding = lt >= T.explode[0]
-
-    SLOTS.forEach(([sx, sy, sz], i) => {
-      b.set(sx, sy, sz).multiplyScalar(PITCH) // home slot
-      if (!exploding) {
-        // Fly in from where the last round's explosion left this block.
-        blastDir(round - 1, i, d)
-        a.copy(b).addScaledVector(d, BLAST + DRIFT)
-        const k = clamp01((lt - i * T.stagger) / T.fly)
-        const e = easeOutBack(k)
-        p.copy(a).lerp(b, e)
-        tumbleAxis(round - 1, i, ax)
-        q.setFromAxisAngle(ax, (1 - easeOut(k)) * 4)
-        if (sy === 1) {
-          p.applyAxisAngle(yAxis, twist)
-          q.premultiply(q2.setFromAxisAngle(yAxis, twist))
-        }
-        p.applyAxisAngle(yAxis, spin)
-        q.premultiply(q2.setFromAxisAngle(yAxis, spin))
-      } else {
-        // Blast outward fast, then keep drifting and tumbling.
-        blastDir(round, i, d)
-        const k = easeOut(clamp01((lt - T.explode[0]) / (T.explode[1] - T.explode[0])))
-        const drift = clamp01((lt - T.explode[1]) / (T.end - T.explode[1])) * DRIFT
-        p.copy(b).addScaledVector(d, k * BLAST + drift)
-        tumbleAxis(round, i, ax)
-        q.setFromAxisAngle(ax, (k + drift) * 4)
+    if (sim.phase === 'assemble') {
+      if (!sim.captured) {
+        sim.blocks.forEach((b) => {
+          b.from.copy(b.pos)
+          b.fromQuat.copy(b.quat)
+        })
+        sim.captured = true
       }
-      m.compose(p, q, one)
+      sim.blocks.forEach((b, i) => {
+        const k = clamp01((t - i * STAGGER) / FLY)
+        b.pos.copy(b.from).lerp(b.home, easeOutBack(k))
+        b.quat.copy(b.fromQuat).slerp(identity, easeInOut(k))
+      })
+      if (t >= PHASE.assemble) {
+        sim.blocks.forEach((b) => {
+          b.pos.copy(b.home)
+          b.quat.identity()
+        })
+        enter('hold')
+      }
+    } else if (sim.phase === 'hold') {
+      // A quarter turn of the whole cube, then a quarter twist of the top
+      // layer. Both end on a quarter turn, so the blocks land back in slots.
+      const spin = easeInOut(clamp01((t - 0.3) / 1.0)) * (Math.PI / 2)
+      const twist = easeInOut(clamp01((t - 1.5) / 0.8)) * (Math.PI / 2)
+      sim.blocks.forEach((b) => {
+        b.pos.copy(b.home)
+        b.quat.identity()
+        if (b.top) {
+          b.pos.applyAxisAngle(yAxis, twist)
+          b.quat.premultiply(q.setFromAxisAngle(yAxis, twist))
+        }
+        b.pos.applyAxisAngle(yAxis, spin)
+        b.quat.premultiply(q.setFromAxisAngle(yAxis, spin))
+      })
+      if (t >= PHASE.hold) {
+        // Re-home each block to the slot it now occupies, keeping its
+        // current position and rotation exactly.
+        sim.blocks.forEach((b) => b.home.copy(b.pos))
+        enter('shake')
+      }
+    } else if (sim.phase === 'shake') {
+      // Rumble that builds up until the cube can't hold together.
+      const k = clamp01(t / PHASE.shake)
+      const amp = 0.012 + k * k * 0.07
+      sim.blocks.forEach((b, i) => {
+        const w = t * 70 + i * 13.7
+        p.set(Math.sin(w), Math.sin(w * 1.3 + 2), Math.sin(w * 0.9 + 4)).multiplyScalar(amp)
+        b.pos.copy(b.home).addScaledVector(b.home, k * 0.06).add(p)
+      })
+      if (t >= PHASE.shake) {
+        sim.round++
+        sim.blocks.forEach((b, i) => {
+          // Burst outward from the centre, with a per-round wobble so every
+          // explosion is different.
+          v.copy(b.home)
+          v.x += (hash(sim.round, i, 1) - 0.5) * 0.9
+          v.y += (hash(sim.round, i, 2) - 0.5) * 0.9
+          v.z += (hash(sim.round, i, 3) - 0.5) * 0.9
+          if (v.lengthSq() < 0.01) v.set(0, 1, 0)
+          b.vel.copy(v.normalize()).multiplyScalar(5.5 + hash(sim.round, i, 4) * 2.5)
+          b.spin.set(hash(sim.round, i, 5) - 0.5, hash(sim.round, i, 6) - 0.5, hash(sim.round, i, 7) - 0.5)
+          b.spin.multiplyScalar(14)
+        })
+        enter('scatter')
+      }
+    } else if (sim.phase === 'scatter') {
+      // Fly out and slow down (drag), tumbling as they go.
+      const drag = Math.exp(-3.2 * step)
+      sim.blocks.forEach((b) => {
+        b.pos.addScaledVector(b.vel, step)
+        b.vel.multiplyScalar(drag)
+        b.spin.multiplyScalar(Math.exp(-1.2 * step))
+        const angle = b.spin.length() * step
+        if (angle > 0) b.quat.premultiply(q.setFromAxisAngle(v.copy(b.spin).normalize(), angle))
+      })
+      if (t >= PHASE.scatter) {
+        // The cube reassembles in the plain grid layout.
+        sim.blocks.forEach((b, i) => b.home.set(...SLOTS[i]).multiplyScalar(PITCH))
+        enter('assemble')
+      }
+    }
+
+    sim.blocks.forEach((b, i) => {
+      m.compose(b.pos, b.quat, one)
       g.setMatrixAt(i, m)
     })
     g.instanceMatrix.needsUpdate = true
