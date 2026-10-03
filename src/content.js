@@ -4,7 +4,7 @@ export const profile = {
   role: 'BSIT student · Creative generalist',
   tagline: 'I build apps that take the busywork off your plate.',
   // Leave empty to point the contact buttons at GitHub instead of email.
-  email: '',
+  email: 'dilinilafelymaxrazelp@gmail.com',
   links: [{ label: 'GitHub', href: 'https://github.com/galaxymaxp' }],
   about:
     'I am a BSIT student at the University of the Cordilleras and a MAWD graduate from STI Senior High School. ' +
