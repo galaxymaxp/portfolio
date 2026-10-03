@@ -17,10 +17,10 @@ export default function App() {
   // list, so object i always lines up with section i.
   const stops = useMemo(
     () => [
-      { id: 'hero', shape: 'orb' },
+      { id: 'hero', shape: 'blocks' },
       ...projects.map((p) => ({ id: p.id, shape: p.shape, selectable: true })),
       { id: 'about', shape: 'cube' },
-      { id: 'contact', shape: 'urchin', center: true },
+      { id: 'contact', shape: 'planet', center: true },
     ],
     [],
   )

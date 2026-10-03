@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Float } from '@react-three/drei'
 import * as THREE from 'three'
-import { LiquidCube, LiquidOrb, Rumbler, Twister, Urchin } from './Chrome.jsx'
+import { Blocks, LiquidCube, Planet, Rumbler, Twister } from './Chrome.jsx'
 import { Monitor, Phone } from './Devices.jsx'
 
 const reduceMotion =
@@ -11,9 +11,9 @@ const reduceMotion =
 /* ---------- shapes ---------- */
 
 const SHAPES = {
-  orb: LiquidOrb,
+  blocks: Blocks,
   cube: LiquidCube,
-  urchin: Urchin,
+  planet: Planet,
   rumbler: Rumbler,
   twister: Twister,
   phone: Phone,

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
@@ -64,52 +63,6 @@ function useDeform(geometry, fn) {
   }
 }
 
-/* ---------- hero: liquid chrome orb ---------- */
-
-// Droplets orbiting the core, each on its own looping path, so they drift in,
-// fuse with the core, and pull away again.
-const DROPLETS = [
-  { r: 0.2, sx: 0.9, sy: 1.3, sz: 0.7, p: 0.0, s: 0.55 },
-  { r: 0.22, sx: 1.1, sy: 0.6, sz: 1.4, p: 1.7, s: 0.5 },
-  { r: 0.18, sx: 0.7, sy: 1.6, sz: 1.0, p: 3.1, s: 0.45 },
-  { r: 0.24, sx: 1.5, sy: 0.9, sz: 0.6, p: 4.4, s: 0.4 },
-  { r: 0.16, sx: 1.2, sy: 1.1, sz: 1.7, p: 5.6, s: 0.45 },
-  { r: 0.21, sx: 0.6, sy: 1.4, sz: 1.2, p: 2.4, s: 0.4 },
-]
-
-export function LiquidOrb({ hovered }) {
-  const chrome = useChrome()
-  const liquid = useMemo(() => {
-    const mc = new MarchingCubes(56, chrome, false, false, 80000)
-    mc.isolation = 70
-    mc.scale.setScalar(2.4)
-    return mc
-  }, [chrome])
-  useEffect(() => () => liquid.geometry.dispose(), [liquid])
-  const tick = useEnergy(hovered)
-
-  useFrame((_, dt) => {
-    const { e, t } = tick(dt, 0.6)
-    // Field coordinates run 0..1 with the centre at 0.5.
-    liquid.reset()
-    liquid.addBall(0.5, 0.5, 0.5, 0.9 * (1 + Math.sin(t * 1.3) * 0.04), 12)
-    const reach = 0.19 + e * 0.07
-    for (const d of DROPLETS) {
-      const k = t * d.s + d.p
-      liquid.addBall(
-        0.5 + Math.sin(k * d.sx) * (reach + d.r * 0.3),
-        0.5 + Math.cos(k * d.sy) * reach * 0.9,
-        0.5 + Math.sin(k * d.sz + 1.3) * reach * 0.8,
-        0.3 + d.r * 0.5,
-        12,
-      )
-    }
-    liquid.update()
-  })
-
-  return <primitive object={liquid} />
-}
-
 /* ---------- about: liquid cube ---------- */
 
 // A rounded chrome cube whose faces ripple like a shaken glass of mercury.
@@ -139,61 +92,6 @@ export function LiquidCube({ hovered }) {
     deform(t, e)
   })
   return <mesh geometry={geometry} material={chrome} />
-}
-
-/* ---------- contact: spiky urchin ---------- */
-
-const SPIKES = 140
-
-// Evenly spread directions over a sphere (golden-angle spiral).
-function sphereDirections(n) {
-  const out = []
-  const golden = Math.PI * (3 - Math.sqrt(5))
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (i / (n - 1)) * 2
-    const r = Math.sqrt(1 - y * y)
-    out.push(new THREE.Vector3(Math.cos(golden * i) * r, y, Math.sin(golden * i) * r))
-  }
-  return out
-}
-
-// A chrome sea urchin. Its spikes pulse in waves; on hover they shoot out.
-export function Urchin({ hovered }) {
-  const chrome = useChrome({ roughness: 0.1 })
-  const spikes = useRef()
-  const dirs = useMemo(() => sphereDirections(SPIKES), [])
-  const cone = useMemo(() => {
-    const g = new THREE.ConeGeometry(0.075, 1, 12)
-    g.translate(0, 0.5, 0) // grow outward from the base
-    return g
-  }, [])
-  const tick = useEnergy(hovered)
-  const m = useMemo(
-    () => ({ mat: new THREE.Matrix4(), q: new THREE.Quaternion(), s: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0) }),
-    [],
-  )
-  useFrame((_, dt) => {
-    const { t, e } = tick(dt)
-    const mesh = spikes.current
-    if (!mesh) return
-    dirs.forEach((d, i) => {
-      const wave = 0.5 + 0.5 * Math.sin(t * 3 + d.y * 5 + d.x * 2)
-      const len = 0.45 + wave * 0.35 + e * 0.45
-      m.q.setFromUnitVectors(m.up, d)
-      m.s.set(1, len, 1)
-      m.mat.compose(d.clone().multiplyScalar(0.62), m.q, m.s)
-      mesh.setMatrixAt(i, m.mat)
-    })
-    mesh.instanceMatrix.needsUpdate = true
-  })
-  return (
-    <group scale={0.95}>
-      <mesh material={chrome}>
-        <icosahedronGeometry args={[0.7, 6]} />
-      </mesh>
-      <instancedMesh ref={spikes} args={[cone, chrome, SPIKES]} />
-    </group>
-  )
 }
 
 /* ---------- decor: rumbling rock ---------- */
@@ -256,4 +154,216 @@ export function Twister({ hovered }) {
     deform(t, e)
   })
   return <mesh geometry={dense} material={chrome} rotation={[0, 0, 0.5]} />
+}
+
+/* ---------- hero: magnetic building blocks ---------- */
+
+const PITCH = 0.66 // block size plus gap
+const SLOTS = []
+for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) SLOTS.push([x, y, z])
+
+// The loop, in seconds. Blocks fly in and snap together, the cube spins and
+// its top layer twists, then it blows apart and the pieces drift and tumble
+// until the next round pulls them back in.
+const T = { assemble: 2.8, stagger: 0.045, fly: 1.0, spin: [3.0, 4.1], twist: [4.2, 5.0], explode: [5.5, 6.1], end: 8.2 }
+const BLAST = 1.7
+const DRIFT = 0.4
+
+const clamp01 = (x) => Math.min(Math.max(x, 0), 1)
+const easeInOut = (x) => x * x * (3 - 2 * x)
+const easeOut = (x) => 1 - Math.pow(1 - x, 3)
+// Overshoots a little before settling: the "snap" of a magnet.
+const easeOutBack = (x) => {
+  const c = 1.9
+  return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2)
+}
+
+// Direction block `i` is thrown in round `c`: outward from its slot, with a
+// per-round wobble so every explosion looks different.
+function blastDir(c, i, out) {
+  const [x, y, z] = SLOTS[i]
+  out.set(x + (hash(c, i, 1) - 0.5) * 1.6, y + (hash(c, i, 2) - 0.5) * 1.6, z + (hash(c, i, 3) - 0.5) * 1.6)
+  if (out.lengthSq() < 0.01) out.set(0, 1, 0)
+  return out.normalize()
+}
+
+function tumbleAxis(c, i, out) {
+  return out.set(hash(c, i, 4) - 0.5, hash(c, i, 5) - 0.5, hash(c, i, 6) - 0.5).normalize()
+}
+
+export function Blocks({ hovered }) {
+  const chrome = useChrome({ roughness: 0.09 })
+  const mesh = useRef()
+  const geometry = useMemo(() => new RoundedBoxGeometry(0.6, 0.6, 0.6, 4, 0.07), [])
+  const tick = useEnergy(hovered)
+  const tmp = useMemo(
+    () => ({
+      m: new THREE.Matrix4(),
+      q: new THREE.Quaternion(),
+      q2: new THREE.Quaternion(),
+      p: new THREE.Vector3(),
+      a: new THREE.Vector3(),
+      b: new THREE.Vector3(),
+      d: new THREE.Vector3(),
+      ax: new THREE.Vector3(),
+      one: new THREE.Vector3(1, 1, 1),
+      yAxis: new THREE.Vector3(0, 1, 0),
+    }),
+    [],
+  )
+
+  useFrame((_, dt) => {
+    const { t } = tick(dt, 1)
+    const g = mesh.current
+    if (!g) return
+    const round = Math.floor(t / T.end)
+    const lt = t - round * T.end
+    const { m, q, q2, p, a, b, d, ax, one, yAxis } = tmp
+
+    // Whole-cube spin and top-layer twist are each exactly a quarter turn,
+    // so once they finish the blocks sit in slots again and the angles can
+    // snap back to zero invisibly (every block looks the same).
+    const spin = easeInOut(clamp01((lt - T.spin[0]) / (T.spin[1] - T.spin[0]))) * (Math.PI / 2)
+    const twist = easeInOut(clamp01((lt - T.twist[0]) / (T.twist[1] - T.twist[0]))) * (Math.PI / 2)
+    const exploding = lt >= T.explode[0]
+
+    SLOTS.forEach(([sx, sy, sz], i) => {
+      b.set(sx, sy, sz).multiplyScalar(PITCH) // home slot
+      if (!exploding) {
+        // Fly in from where the last round's explosion left this block.
+        blastDir(round - 1, i, d)
+        a.copy(b).addScaledVector(d, BLAST + DRIFT)
+        const k = clamp01((lt - i * T.stagger) / T.fly)
+        const e = easeOutBack(k)
+        p.copy(a).lerp(b, e)
+        tumbleAxis(round - 1, i, ax)
+        q.setFromAxisAngle(ax, (1 - easeOut(k)) * 4)
+        if (sy === 1) {
+          p.applyAxisAngle(yAxis, twist)
+          q.premultiply(q2.setFromAxisAngle(yAxis, twist))
+        }
+        p.applyAxisAngle(yAxis, spin)
+        q.premultiply(q2.setFromAxisAngle(yAxis, spin))
+      } else {
+        // Blast outward fast, then keep drifting and tumbling.
+        blastDir(round, i, d)
+        const k = easeOut(clamp01((lt - T.explode[0]) / (T.explode[1] - T.explode[0])))
+        const drift = clamp01((lt - T.explode[1]) / (T.end - T.explode[1])) * DRIFT
+        p.copy(b).addScaledVector(d, k * BLAST + drift)
+        tumbleAxis(round, i, ax)
+        q.setFromAxisAngle(ax, (k + drift) * 4)
+      }
+      m.compose(p, q, one)
+      g.setMatrixAt(i, m)
+    })
+    g.instanceMatrix.needsUpdate = true
+  })
+
+  return <instancedMesh ref={mesh} args={[geometry, chrome, SLOTS.length]} />
+}
+
+/* ---------- contact: a planet forming ---------- */
+
+const DEBRIS = 170
+
+// A molten chrome core that churns as it forms, with rubble spiralling in
+// from an accretion disk and vanishing into it, plus a thin dust ring.
+// Hover speeds the whole system up.
+export function Planet({ hovered }) {
+  const chrome = useChrome({ roughness: 0.1 })
+  const rocky = useChrome({ roughness: 0.18, flatShading: true })
+  // Welded so normals are shared and the churning surface shades smoothly.
+  const core = useMemo(() => {
+    const g = new THREE.IcosahedronGeometry(0.85, 20)
+    g.deleteAttribute('normal')
+    g.deleteAttribute('uv')
+    return mergeVertices(g)
+  }, [])
+  const debris = useRef()
+  const dust = useRef()
+  const chunk = useMemo(() => new THREE.IcosahedronGeometry(0.06, 0), [])
+  const grain = useMemo(() => new THREE.IcosahedronGeometry(0.018, 0), [])
+  const tick = useEnergy(hovered)
+
+  // Each piece of rubble: its own start angle, speed, height and lifetime.
+  const rubble = useMemo(
+    () =>
+      Array.from({ length: DEBRIS }, (_, i) => ({
+        angle: hash(i, 1, 9) * Math.PI * 2,
+        speed: 0.5 + hash(i, 2, 9) * 0.6,
+        life: 4 + hash(i, 3, 9) * 4,
+        offset: hash(i, 4, 9),
+        lift: (hash(i, 5, 9) - 0.5) * 0.25,
+        size: 0.5 + hash(i, 6, 9) * 1.3,
+        spinAxis: new THREE.Vector3(hash(i, 7, 9) - 0.5, hash(i, 8, 9) - 0.5, 0.3).normalize(),
+      })),
+    [],
+  )
+
+  const deform = useDeform(core, (p, n, out, t) => {
+    // Slow, broad swells plus finer churn: a surface that is still settling.
+    const w =
+      Math.sin(n.x * 4 + t * 0.9) * Math.sin(n.y * 3.5 - t * 0.7) * 0.05 +
+      Math.sin(n.z * 9 + n.x * 6 + t * 1.6) * 0.018
+    out.copy(p).addScaledVector(n, w)
+  })
+
+  const tmp = useMemo(
+    () => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3() }),
+    [],
+  )
+
+  useFrame((_, dt) => {
+    const { t, e } = tick(dt, 1)
+    deform(t, e)
+    const { m, q, p, s } = tmp
+
+    const d = debris.current
+    if (d) {
+      rubble.forEach((r, i) => {
+        // Age 0 = outer edge of the disk, 1 = swallowed by the core.
+        const age = (t / r.life + r.offset) % 1
+        const radius = THREE.MathUtils.lerp(2.3, 0.82, Math.pow(age, 1.4))
+        const ang = r.angle + t * r.speed * (2.4 / radius) // faster near the core
+        p.set(Math.cos(ang) * radius, r.lift * radius, Math.sin(ang) * radius)
+        q.setFromAxisAngle(r.spinAxis, t * 2 + i)
+        const shrink = age > 0.9 ? 1 - (age - 0.9) / 0.1 : 1
+        s.setScalar(r.size * shrink)
+        m.compose(p, q, s)
+        d.setMatrixAt(i, m)
+      })
+      d.instanceMatrix.needsUpdate = true
+    }
+    if (dust.current) dust.current.rotation.y = t * 0.12
+  })
+
+  const ring = useMemo(() => {
+    const ms = []
+    const mm = new THREE.Matrix4()
+    for (let i = 0; i < 400; i++) {
+      const a = hash(i, 11, 3) * Math.PI * 2
+      const r = 2.5 + hash(i, 12, 3) * 0.45
+      mm.makeTranslation(Math.cos(a) * r, (hash(i, 13, 3) - 0.5) * 0.04, Math.sin(a) * r)
+      ms.push(mm.clone())
+    }
+    return ms
+  }, [])
+
+  return (
+    <group rotation={[0.38, 0, -0.18]}>
+      <mesh geometry={core} material={chrome} />
+      <instancedMesh ref={debris} args={[chunk, rocky, DEBRIS]} />
+      <instancedMesh
+        ref={(mesh) => {
+          dust.current = mesh
+          if (mesh && !mesh.userData.filled) {
+            ring.forEach((mm, i) => mesh.setMatrixAt(i, mm))
+            mesh.instanceMatrix.needsUpdate = true
+            mesh.userData.filled = true
+          }
+        }}
+        args={[grain, chrome, ring.length]}
+      />
+    </group>
+  )
 }
